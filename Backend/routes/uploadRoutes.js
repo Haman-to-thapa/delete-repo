@@ -8,55 +8,73 @@ dotenv.config();
 
 const router = express.Router()
 
-
 // Cloudinary Configuration
-
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret:process.env.CLOUDINARY_API_SECRET,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true // Enable HTTPS
 })
 
-
-//Multer setup using memory storagae
+// Multer setup with file size limit and file type validation
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
 
 router.post('/', upload.single("image"), async(req, res) => {
   try {
     if(!req.file) {
-      return res.status(400).json({message: "No file Uploaded "})
+      return res.status(400).json({message: "No file uploaded"})
     }
 
-    // function to handle to stream upload to cloudinary
-    
+    // Optimize image before upload
     const streamUpload = (filebuffer) => {
-      return new Promise((reslove, reject) => {
-        const stream = cloudinary.uploader.upload_stream((error, result) => {
-          if(result) {
-            reslove(result)
-          } else {
-            reject(error)
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: 'auto',
+            quality: 'auto',
+            fetch_format: 'auto',
+          },
+          (error, result) => {
+            if(result) {
+              resolve(result)
+            } else {
+              reject(error)
+            }
           }
-        });
+        );
         
-        // use streamifier to convert file buffer to a stram
         streamifier.createReadStream(filebuffer).pipe(stream);
       })
     }
 
-       // Call the streamUpload  function
-       const result = await streamUpload(req.file.buffer);
-
-       // Respond with teh uploaded image URL
-       res.json({imageUrl: result.secure_url});
+    const result = await streamUpload(req.file.buffer);
+    
+    res.status(200).json({
+      success: true,
+      imageUrl: result.secure_url,
+      publicId: result.public_id
+    });
   } catch (error) {
-    console.error(error)
-    res.status(500).json({message: "Server Error"})
+    console.error('Upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error uploading image'
+    });
   }
-})
+});
 
 export default router;
 
