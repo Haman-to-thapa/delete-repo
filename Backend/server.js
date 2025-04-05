@@ -50,7 +50,12 @@ app.use('/api/admin/orders', adminOrderRoutes)
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../frontend/dist')))
   
-  // Handle client-side routing
+  // Handle client-side routing for admin panel
+  app.get('/admin*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'))
+  })
+  
+  // Handle all other routes
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'))
   })

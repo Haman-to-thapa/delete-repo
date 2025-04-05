@@ -5,7 +5,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    historyApiFallback: true,
+    historyApiFallback: {
+      rewrites: [
+        { from: /^\/admin/, to: '/index.html' },
+        { from: /^\/admin\/.*/, to: '/index.html' }
+      ]
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
