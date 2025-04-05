@@ -48,15 +48,17 @@ app.use('/api/admin/orders', adminOrderRoutes)
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the React app
   app.use(express.static(path.join(__dirname, '../frontend/dist')))
   
-  // Handle client-side routing for admin panel
-  app.get('/admin*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'))
-  })
-  
-  // Handle all other routes
+  // Handle all routes that don't match API routes
   app.get('*', (req, res) => {
+    // Check if the request is for an API route
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ message: 'API route not found' })
+    }
+    
+    // For all other routes, serve the React app
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'))
   })
 }
